@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('signal dispatch', async ({ page }) => {
+test('Dispatch Window Default Status', async ({ page }) => {
   // Block heavy resources like images
   await page.route(/\.(png|jpg|jpeg)$/i, route => route.abort());
 
