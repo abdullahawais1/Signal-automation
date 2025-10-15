@@ -52,7 +52,7 @@ test.describe('Signal Dispatch Suite', () => {
     // ---------------------- STEP 2: CLEAR ALL STATUSES ----------------------
     const clearStatusesButton = page
       .locator('div')
-      .filter({ hasText: /^All Statuses \(2\)Next 1 HourAll Officers$/ })
+      .filter({ hasText: /^All Statuses \(2\)/ })
       .getByRole('img')
       .first();
 
@@ -67,57 +67,46 @@ test.describe('Signal Dispatch Suite', () => {
 
     console.log('✅ Cleared all statuses');
 
-    // ---------------------- STEP 3: VERIFY CLOCKED-IN USERS APPEAR FIRST ----------------------
-console.log('🔍 Verifying "Clocked in" users appear before "Available" users...');
-
-// Anchor to "Available Users" accordion section
-const availableUsersAccordion = page.locator(
+     // Wait for Available Users accordion to appear
+const availableAccordion = page.locator(
   "div.MuiAccordion-root",
   { has: page.locator("h6", { hasText: "Available Users" }) }
 );
 
-// Wait for the accordion to be visible
-await expect(availableUsersAccordion).toBeVisible({ timeout: 20000 });
+await availableAccordion.waitFor({ state: 'visible', timeout: 15000 });
+console.log("✅ Available Users section visible");
 
-// Now locate user cards *within* the Available Users accordion
-const userCards = availableUsersAccordion.locator("div.jss172.MuiBox-root");
-
-// Ensure cards are present
-//await expect(userCards.first()).toBeVisible({ timeout: 20000 });
-
-// Extract officer names and statuses dynamically
-const userData = [];
-const cardCount = await userCards.count();
-
-for (let i = 0; i < cardCount; i++) {
-  const card = userCards.nth(i);
-
-  const name = (await card.locator("p.MuiTypography-body1").innerText().catch(() => 'Unknown')).trim();
-  const isClockedIn = await card.locator("span:has-text('Clocked in')").isVisible().catch(() => false);
-  const isAvailable = await card.locator("span:has-text('Available')").isVisible().catch(() => false);
-
-  let status = 'Unknown';
-  if (isClockedIn) status = 'Clocked in';
-  else if (isAvailable) status = 'Available';
-
-  userData.push({ name, status });
-}
-
-console.log(`✅ Extracted ${userData.length} users`);
-console.table(userData);
-
-// Verify "Clocked in" users appear before "Available" users
-let seenAvailable = false;
-for (const user of userData) {
-  if (user.status === 'Available') seenAvailable = true;
-  if (user.status === 'Clocked in' && seenAvailable) {
-    console.log(`❌ Order violation: "${user.name}" (Clocked in) appeared after an Available user.`);
-    throw new Error('Clocked-in order violated');
-  }
-}
-
-console.log('✅ Order check passed: All "Clocked in" users appear before "Available" users.');
+// Locate user cards inside this accordion
+const userCards = availableAccordion.locator(
+  "xpath=.//span[normalize-space()='Clocked in' or normalize-space()='Available']" +
+  "/ancestor::div[contains(@class,'MuiBox-root')][1]"
+);
 
 
+    const count = await userCards.count();
+    console.log(`✅ Found ${count} officer cards`);
+
+    const users = [];
+    for (let i = 0; i < count; i++) {
+      const card = userCards.nth(i);
+      const name = (await card.locator("p").first().textContent().catch(() => '')).trim();
+      const status = (await card.locator("span:has-text('Clocked in'), span:has-text('Available')").first().textContent().catch(() => '')).trim();
+      users.push({ name, status });
+    }
+
+    console.table(users);
     
+
+    // 🧠 Validate Clocked in appear before Available
+    const statuses = users.map(u => u.status);
+    const firstAvailableIndex = statuses.indexOf('Available');
+    const lastClockedInIndex = statuses.lastIndexOf('Clocked in');
+
+    if (firstAvailableIndex !== -1 && lastClockedInIndex !== -1) {
+      expect(lastClockedInIndex).toBeLessThan(firstAvailableIndex);
+      console.log('✅ Order validation passed: "Clocked in" users appear before "Available" users');
+    } else {
+      console.warn('⚠️ Not enough data to validate order (missing one of the statuses)');
+    }
+
 });  });
