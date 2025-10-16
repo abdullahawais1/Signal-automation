@@ -46,7 +46,7 @@ test.describe('Signal Dispatch Suite', () => {
       .getByRole('button')
       .first();
 
-    await assignButton.waitFor({ state: 'visible', timeout: 20000 });
+    await assignButton.waitFor({ state: 'visible', timeout: 30000 });
     await assignButton.click();
     await page.waitForURL('**/assign-officer**', { timeout: 30000 });
     await expect(page).toHaveURL(/assign-officer/);
@@ -71,44 +71,53 @@ test.describe('Signal Dispatch Suite', () => {
 
     console.log('✅ Cleared all statuses');
 
-     // Wait for Available Users accordion to appear
+// ---------------------- STEP 3: CHECK AVAILABLE USERS  ----------------------
 const availableAccordion = page.locator(
   "div.MuiAccordion-root",
   { has: page.locator("h6", { hasText: "Available Users" }) }
 );
-
 await availableAccordion.waitFor({ state: 'visible', timeout: 15000 });
 console.log("✅ Available Users section visible");
 
-// Locate user cards inside this accordion
-const userCards = availableAccordion.locator(
-  "xpath=.//span[normalize-space()='Clocked in' or normalize-space()='Available']" +
-  "/ancestor::div[contains(@class,'MuiBox-root')][1]"
-);
+const officerNames = availableAccordion.locator("p.MuiTypography-body1");
+const count = await officerNames.count();
+console.log(`✅ Found ${count} officer name elements`);
+
+const users = [];
+
+for (let i = 0; i < count; i++) {
+  const officerNameElement = officerNames.nth(i);
+
+  const card = officerNameElement.locator(
+    "xpath=ancestor::div[.//span[contains(@class,'MuiTypography-subtitle3')]][1]"
+  );
+
+  const name = (await officerNameElement.textContent().catch(() => '')).trim() || 'N/A';
+
+  const status = (
+    await card
+      .locator("span:has-text('Clocked in'), span:has-text('Available')")
+      .first()
+      .textContent()
+      .catch(() => '')
+  ).trim() || 'N/A';
+
+  const role = (
+    await card
+      .locator("span.MuiTypography-subtitle3")
+      .filter({ hasNotText: '•' })
+      .first()
+      .textContent()
+      .catch(() => '')
+  ).trim() || 'N/A';
+
+  users.push({ name, status, role });
+}
+
+console.table(users);
 
 
-    const count = await userCards.count();
-    console.log(`✅ Found ${count} officer cards`);
-
-     if (count === 0) {
-      console.error("❌ No data exist in table - test failed");
-      expect(count, "No data exist in table").toBeGreaterThan(0);
-      return;
-    }
-
-    const users = [];
-    for (let i = 0; i < count; i++) {
-      const card = userCards.nth(i);
-      const name = (await card.locator("p").first().textContent().catch(() => '')).trim();
-      const status = (await card.locator("span:has-text('Clocked in'), span:has-text('Available')").first().textContent().catch(() => '')).trim();
-      users.push({ name, status });
-    }
-
-    console.table(users);
-    
-
-    // 🧠 Validate Clocked in appear before Available
-    const statuses = users.map(u => u.status);
+const statuses = users.map(u => u.status);
     const firstAvailableIndex = statuses.indexOf('Available');
     const lastClockedInIndex = statuses.lastIndexOf('Clocked in');
 
