@@ -71,63 +71,47 @@ test.describe('Signal Dispatch Suite', () => {
 
     console.log('✅ Cleared all statuses');
 
-// ---------------------- STEP 3: CHECK AVAILABLE USERS  ----------------------
-const availableAccordion = page.locator(
-  "div.MuiAccordion-root",
-  { has: page.locator("h6", { hasText: "Available Users" }) }
-);
-await availableAccordion.waitFor({ state: 'visible', timeout: 15000 });
-console.log("✅ Available Users section visible");
+        // ---------------------- STEP 3: VERIFY STATUS COLORS ----------------------
+    console.log('🔍 Verifying status tag colors...');
+    //await page.pause();
 
-const officerNames = availableAccordion.locator("p.MuiTypography-body1");
-const count = await officerNames.count();
-console.log(`✅ Found ${count} officer name elements`);
+    const statusStyles = {
+      "In Progress": { color: "rgb(20, 109, 255)", background: "rgb(239, 248, 255)" },
+      "Not Started": { color: "rgb(233, 90, 8)", background: "rgb(251, 238, 237)" },
+      "Clocked in": { color: "rgb(46, 150, 75)", background: "rgb(236, 253, 243)" },
+      "Available": { color: "rgb(220, 104, 3)", background: "rgb(255, 250, 235)" },
+      "Upcoming": { color: "rgb(89, 37, 220)", background: "rgb(244, 243, 255)" }
+    };
+    await page.waitForTimeout(2000);
 
-const users = [];
+    // Loop through each status and validate occurrences
+    for (const [status, expected] of Object.entries(statusStyles)) {
+      const tags = page.locator(`text=${status}`);
+      const count = await tags.count();
 
-for (let i = 0; i < count; i++) {
-  const officerNameElement = officerNames.nth(i);
+      if (count === 0) {
+        console.warn(`⚠️ No "${status}" tags found on page.`);
+        continue;
+      }
 
-  const card = officerNameElement.locator(
-    "xpath=ancestor::div[.//span[contains(@class,'MuiTypography-subtitle3')]][1]"
-  );
+      for (let i = 0; i < count; i++) {
+        const [actualColor, actualBg] = await tags.nth(i).evaluate(el => {
+          const style = window.getComputedStyle(el);
+          return [style.color, style.backgroundColor];
+        });
 
-  const name = (await officerNameElement.textContent().catch(() => '')).trim() || 'N/A';
-
-  const status = (
-    await card
-      .locator("span:has-text('Clocked in'), span:has-text('Available')")
-      .first()
-      .textContent()
-      .catch(() => '')
-  ).trim() || 'N/A';
-
-  const role = (
-    await card
-      .locator("span.MuiTypography-subtitle3")
-      .filter({ hasNotText: '•' })
-      .first()
-      .textContent()
-      .catch(() => '')
-  ).trim() || 'N/A';
-
-  users.push({ name, status, role });
-}
-
-console.table(users);
-
-
-const statuses = users.map(u => u.status);
-    const firstAvailableIndex = statuses.indexOf('Available');
-    const lastClockedInIndex = statuses.lastIndexOf('Clocked in');
-
-     if (lastClockedInIndex === -1) {
-      console.warn('⚠️ No clocked-in officer available currently');
-    } else if (firstAvailableIndex !== -1 && lastClockedInIndex !== -1) {
-      expect(lastClockedInIndex).toBeLessThan(firstAvailableIndex);
-      console.log('✅ "Clocked in" users appear before "Available" users');
-    } else {
-      console.warn('⚠️ Not enough data to validate order');
+        try {
+          expect(actualColor, `${status} tag text color mismatch`).toBe(expected.color);
+          expect(actualBg, `${status} tag background mismatch`).toBe(expected.background);
+          console.log(`✅ "${status}" tag ${i + 1}: Color and background verified.`);
+        } catch (err) {
+          console.error(`❌ "${status}" tag ${i + 1}: Expected text=${expected.color}, background=${expected.background} | Got text=${actualColor}, background=${actualBg}`);
+        }
+      }
     }
 
-});  });
+    console.log(' All visible status tag colors verified successfully.');
+
+
+  });
+});

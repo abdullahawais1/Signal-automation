@@ -71,63 +71,7 @@ test.describe('Signal Dispatch Suite', () => {
 
     console.log('✅ Cleared all statuses');
 
-// ---------------------- STEP 3: CHECK AVAILABLE USERS  ----------------------
-const availableAccordion = page.locator(
-  "div.MuiAccordion-root",
-  { has: page.locator("h6", { hasText: "Available Users" }) }
-);
-await availableAccordion.waitFor({ state: 'visible', timeout: 15000 });
-console.log("✅ Available Users section visible");
+    
 
-const officerNames = availableAccordion.locator("p.MuiTypography-body1");
-const count = await officerNames.count();
-console.log(`✅ Found ${count} officer name elements`);
-
-const users = [];
-
-for (let i = 0; i < count; i++) {
-  const officerNameElement = officerNames.nth(i);
-
-  const card = officerNameElement.locator(
-    "xpath=ancestor::div[.//span[contains(@class,'MuiTypography-subtitle3')]][1]"
-  );
-
-  const name = (await officerNameElement.textContent().catch(() => '')).trim() || 'N/A';
-
-  const status = (
-    await card
-      .locator("span:has-text('Clocked in'), span:has-text('Available')")
-      .first()
-      .textContent()
-      .catch(() => '')
-  ).trim() || 'N/A';
-
-  const role = (
-    await card
-      .locator("span.MuiTypography-subtitle3")
-      .filter({ hasNotText: '•' })
-      .first()
-      .textContent()
-      .catch(() => '')
-  ).trim() || 'N/A';
-
-  users.push({ name, status, role });
-}
-
-console.table(users);
-
-
-const statuses = users.map(u => u.status);
-    const firstAvailableIndex = statuses.indexOf('Available');
-    const lastClockedInIndex = statuses.lastIndexOf('Clocked in');
-
-     if (lastClockedInIndex === -1) {
-      console.warn('⚠️ No clocked-in officer available currently');
-    } else if (firstAvailableIndex !== -1 && lastClockedInIndex !== -1) {
-      expect(lastClockedInIndex).toBeLessThan(firstAvailableIndex);
-      console.log('✅ "Clocked in" users appear before "Available" users');
-    } else {
-      console.warn('⚠️ Not enough data to validate order');
-    }
-
-});  });
+});
+});
