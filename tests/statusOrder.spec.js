@@ -71,7 +71,67 @@ test.describe('Signal Dispatch Suite', () => {
 
     console.log('✅ Cleared all statuses');
 
-    
+    // ---------------------- STEP 3: VERIFY JOB STATUS ORDER ----------------------
+console.log('🔍 Verifying job status order in Dedicated and Patrol sections...');
+
+// Status priority mapping 
+const statusPriority = {
+  "in progress": 1,
+  "not started": 2,
+  "upcoming": 3
+};
+
+// Helper function to verify order inside a section
+async function verifySectionOrder(sectionName, headingText) {
+  console.log(`Checking order for section: ${sectionName}`);
+
+  // Locate the section container
+  const section = page.locator("div.MuiAccordion-root", {
+    has: page.locator("h6", { hasText: headingText })
+  });
+
+  // Wait for the section to appear
+  await section.waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForTimeout(1000);
+
+  // Grab all visible status
+  const statusElements = section.locator("span", { hasText: /In progress|Not started|Upcoming/i });
+  const count = await statusElements.count();
+
+  if (count === 0) {
+    console.log(` No jobs found in ${sectionName} section.`);
+    return;
+  }
+
+  const statuses = [];
+  for (let i = 0; i < count; i++) {
+    const text = (await statusElements.nth(i).innerText()).trim().toLowerCase();
+    statuses.push(text);
+  }
+
+  // Convert to priority numbers
+  const priorities = statuses.map(s => statusPriority[s] ?? 999);
+
+  // Check if sorted correctly 
+  let sorted = true;
+  for (let i = 1; i < priorities.length; i++) {
+    if (priorities[i] < priorities[i - 1]) {
+      sorted = false;
+      break;
+    }
+  }
+
+  if (sorted) {
+    console.log(`Order correct: ${statuses.join(' → ')}`);
+  } else {
+    console.log(`Order incorrect: Found [${statuses.join(', ')}]`);
+  }
+}
+
+await verifySectionOrder('Dedicated Jobs', 'Dedicated Jobs');
+await verifySectionOrder('Patrol Jobs', 'Patrol Jobs (Runsheets)');
+
+console.log('Status order verification completed.');
 
 });
 });
