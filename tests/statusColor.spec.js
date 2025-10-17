@@ -105,7 +105,7 @@ test.describe('Signal Dispatch Suite', () => {
           expect(actualBg, `${status} tag background mismatch`).toBe(expected.background);
           console.log(`✅ "${status}" tag ${i + 1}: Color and background verified.`);
         } catch (err) {
-          console.error(`❌ "${status}" tag ${i + 1}: Expected text=${expected.color}, background=${expected.background} | Got text=${actualColor}, background=${actualBg}`);
+          console.error(`❌ error`);
         }
       }
     }
